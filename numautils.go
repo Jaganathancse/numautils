@@ -1,6 +1,7 @@
 package numautils
 
 import (
+       "errors"
        "fmt"
        "io/ioutil"
        "os"
@@ -8,7 +9,7 @@ import (
        "strconv"
        "strings"
 
-       "github.com/cloudfoundry/bytefmt"
+       "code.cloudfoundry.org/bytefmt"
 )
 
 // Checks directory is available or not
@@ -47,16 +48,16 @@ func GetNumaNodeDirs() ([]string, error) {
         return nil, err
     } else {
         dirs, err := ListDir(numaNodePath)
-        if err == nil {
-            for _, dir := range dirs {
-                baseName := path.Base(dir)
-                if strings.HasPrefix(baseName, "node") {
-                    numaNodeDirs = append(numaNodeDirs, dir)
-                }
-            }
-            return numaNodeDirs, err
+        if err != nil {
+            return nil, err
         }
-        return nil, err
+        for _, dir := range dirs {
+            baseName := path.Base(dir)
+            if strings.HasPrefix(baseName, "node") {
+                numaNodeDirs = append(numaNodeDirs, dir)
+            }
+         }
+         return numaNodeDirs, nil
     }
 }
 
@@ -98,19 +99,19 @@ func GetNodesMemoryInfo() (map[int]string, error){
 }
 
 // Core defines Core ID and  thread siblingsinformation
-type Core struct {
-        CoreID     int
-        Threads    []int
+type CPUInfo struct {
+        CPU            int
+        ThreadSiblings []int
 }
 
-func GetNodesCoresInfo() (map[int][]*Core, error){
-     var cpus = map[int][]*Core{}
+func GetNodesCoresInfo() (map[int][]*CPUInfo, error){
+     var cpus = map[int][]*CPUInfo{}
      dirs, err := GetNumaNodeDirs()
      if err != nil {
          return nil, err
      }
      for _, numaNodeDir := range dirs {
-          var coresInfo = []*Core{}
+          var cpusInfo = []*CPUInfo{}
           var cores = map[int][]int{}
           baseNumaNodeDir := path.Base(numaNodeDir)
           if !strings.HasPrefix(baseNumaNodeDir, "node") {
@@ -143,14 +144,14 @@ func GetNodesCoresInfo() (map[int][]*Core, error){
           }
           fmt.Println(cores)
           for cpuID, threads := range cores {
-                c := &Core{
-                        CoreID:     cpuID,
-                        Threads:    threads,
+                c := &CPUInfo{
+                        CPU:            cpuID,
+                        ThreadSiblings: threads,
                 }
-                coresInfo = append(coresInfo, c)
+                cpusInfo = append(cpusInfo, c)
           }
-          fmt.Println(coresInfo[0].Threads)
-          cpus[NumaNodeID] = coresInfo
+          fmt.Println(cpusInfo[0].ThreadSiblings)
+          cpus[NumaNodeID] = cpusInfo
      }
      return cpus, nil
 }
@@ -188,36 +189,36 @@ func GetNodesNicsInfo() (map[int][]string, error){
 // NUMATopology defines NUMA topology information
 type NUMATopology struct {
         NUMA       int64
-        Memory     string
-        Nics       []string
-        Cores      []*Core
+        RAM        string
+        NICs       []string
+        CPUs       []*CPUInfo
 }
 
 func GetNumaTopology() ([]*NUMATopology, error) {
      var numaTopology []*NUMATopology
-     ram, err := GetNodesMemoryInfo()
+     ramList, err := GetNodesMemoryInfo()
      if err != nil {
-          return nil, err
+          return nil, errors.New("Unable to determine memory details.")
      }
 
      nics, err := GetNodesNicsInfo()
      if err != nil {
-          return nil, err
+          return nil, errors.New("Unable to determine NICs details.")
      }
 
      cpus, err := GetNodesCoresInfo()
      if err != nil {
-          return nil, err
+          return nil, errors.New("Unable to determine CPUs details.")
      }
 
-     for node, mem := range ram {
-         m := &NUMATopology{
+     for node, ram := range ramList {
+         r := &NUMATopology{
               NUMA:       int64(node),
-              Memory:     mem,
-              Nics:       nics[node],
-              Cores:      cpus[node],
+              RAM:        ram,
+              NICs:       nics[node],
+              CPUs:      cpus[node],
          }
-         numaTopology = append(numaTopology, m)
+         numaTopology = append(numaTopology, r)
      }
      return numaTopology, nil
 }
