@@ -2,7 +2,6 @@ package numautils
 
 import (
        "errors"
-       "fmt"
        "io/ioutil"
        "os"
        "path"
@@ -142,7 +141,6 @@ func GetNodesCoresInfo() (map[int][]*CPUInfo, error){
                cpuID, _ := strconv.Atoi(strings.TrimSpace(string(cpuData[:])))
                cores[cpuID] = append(cores[cpuID], threadID)
           }
-          fmt.Println(cores)
           for cpuID, threads := range cores {
                 c := &CPUInfo{
                         CPU:            cpuID,
@@ -150,7 +148,6 @@ func GetNodesCoresInfo() (map[int][]*CPUInfo, error){
                 }
                 cpusInfo = append(cpusInfo, c)
           }
-          fmt.Println(cpusInfo[0].ThreadSiblings)
           cpus[NumaNodeID] = cpusInfo
      }
      return cpus, nil
@@ -163,7 +160,8 @@ func GetNodesNicsInfo() (map[int][]string, error){
      if ExistsDir(nicDevicePath) {
          nicDirs, err := ListDir(nicDevicePath)
          if err != nil {
-             return nil, err
+             return nil, nil
+             // return nil, err
          }
          for _, dir := range nicDirs {
              if !ExistsDir(path.Join(dir, "device")) {
@@ -171,15 +169,17 @@ func GetNodesNicsInfo() (map[int][]string, error){
              }
              nicInfoFileName := path.Join(dir, "device", "numa_node")
              nicInfo, err := ioutil.ReadFile(nicInfoFileName)
-             if err!=nil {
-                 return nil, err
+             if err != nil {
+                 continue
+                 // return nil, err
              }
              baseNicDir := path.Base(dir)
-             numaNodeID, err := strconv.Atoi(strings.TrimSpace(string(nicInfo)))
-             if err != nil {
-                 return nil, err
+             numaNode, err := strconv.Atoi(strings.TrimSpace(string(nicInfo)))
+             if err != nil && numaNode < 0{
+                 continue
+                 // return nil, err
              }
-             nics[numaNodeID] =  append(nics[numaNodeID], baseNicDir)
+             nics[numaNode] =  append(nics[numaNode], baseNicDir)
          }
      }
 
@@ -200,15 +200,16 @@ func GetNumaTopology() ([]*NUMATopology, error) {
      if err != nil {
           return nil, errors.New("Unable to determine memory details.")
      }
-
-     nics, err := GetNodesNicsInfo()
-     if err != nil {
-          return nil, errors.New("Unable to determine NICs details.")
-     }
+     // fmt.Println(ramList)
 
      cpus, err := GetNodesCoresInfo()
      if err != nil {
           return nil, errors.New("Unable to determine CPUs details.")
+     }
+
+     nics, err := GetNodesNicsInfo()
+     if err != nil {
+          return nil, errors.New("Unable to determine NICs details.")
      }
 
      for node, ram := range ramList {
@@ -216,7 +217,7 @@ func GetNumaTopology() ([]*NUMATopology, error) {
               NUMA:       int64(node),
               RAM:        ram,
               NICs:       nics[node],
-              CPUs:      cpus[node],
+              CPUs:       cpus[node],
          }
          numaTopology = append(numaTopology, r)
      }

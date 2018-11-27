@@ -11,7 +11,7 @@ Currently supports for RHEL, fedora and centos environments.
 cd $GOPATH
 mkdir -p ./src/github.com/Jaganathancse/numautils
 git clone https://github.com/Jaganathancse/numautils.git ./src/github.com/Jaganathancse/numautils
-go get code.cloudfoundry.org/bytefmt
+govendor fetch github.com/cloudfoundry/bytefmt
 ```
 
 ### Usage

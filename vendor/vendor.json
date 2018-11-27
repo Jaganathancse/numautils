@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "Jsoo3NsRPmkVG9cBVP6KUaTkrOo=",
+			"path": "code.cloudfoundry.org/bytefmt",
+			"revision": "2aa6f33b730c79971cfc3c742f279195b0abc627",
+			"revisionTime": "2018-09-04T21:41:32Z"
+		}
+	],
+	"rootPath": "github.com/Jaganathancse/numautils"
+}
